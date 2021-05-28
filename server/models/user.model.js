@@ -13,11 +13,10 @@ const UserSchema = new mongoose.Schema({
     match: [/.+\@.+\..+/, 'Please fill a valid email address'],
     required: 'Email is required'
   },
-  hashed_password: {
+  passwords: {
     type: String,
     required: "Password is required"
   },
-  salt: String,
   updated: Date,
   created: {
     type: Date,
@@ -30,23 +29,20 @@ const UserSchema = new mongoose.Schema({
   photo: {
     data: Buffer,
     contentType: String
-  },
-  following: [{type: mongoose.Schema.ObjectId, ref: 'User'}],
-  followers: [{type: mongoose.Schema.ObjectId, ref: 'User'}]
+  }
 })
 
 UserSchema
   .virtual('password')
   .set(function(password) {
     this._password = password
-    this.salt = this.makeSalt()
-    this.hashed_password = this.encryptPassword(password)
+    this.passwords = password
   })
   .get(function() {
     return this._password
   })
 
-UserSchema.path('hashed_password').validate(function(v) {
+UserSchema.path('passwords').validate(function(v) {
   if (this._password && this._password.length < 6) {
     this.invalidate('password', 'Password must be at least 6 characters.')
   }
@@ -57,7 +53,7 @@ UserSchema.path('hashed_password').validate(function(v) {
 
 UserSchema.methods = {
   authenticate: function(plainText) {
-    return this.encryptPassword(plainText) === this.hashed_password
+    return plainText === this.passwords
   },
   encryptPassword: function(password) {
     if (!password) return ''
